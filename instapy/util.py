@@ -1,5 +1,8 @@
 import re
 from .time_util import sleep
+import time
+import pdb
+from random import randint
 from selenium.common.exceptions import NoSuchElementException
 
 
@@ -73,15 +76,12 @@ def delete_line_from_file(filepath, lineToDelete):
 
 
 def scroll_bottom(browser, element, range_int):
-    # put a limit to the scrolling
-    if range_int > 50:
-        range_int = 50
-
-    for i in range(int(range_int / 2)):
-        browser.execute_script(
-            "arguments[0].scrollTop = arguments[0].scrollHeight", element)
-        sleep(1)
-
+    num_elements = 0 
+    for i in range(int(range_int / 2)):        
+        if num_elements != len(browser.find_elements_by_xpath("//div/div/span/button[text()='Following']")) and i != 0:            
+            num_elements = len(browser.find_elements_by_xpath("//div/div/span/button[text()='Following']"))                        
+            browser.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", element)            
+            time.sleep(randint(1,3))
     return
 
 
