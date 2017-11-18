@@ -1,6 +1,10 @@
 """OS Modules environ method to get the setup vars from the Environment"""
 from datetime import datetime
 from os import environ
+import random
+import pdb
+import time
+from datetime import datetime, timedelta
 
 from random import randint
 from random import sample
@@ -25,6 +29,7 @@ from .print_log_writer import log_follower_num
 from .time_util import sleep
 from .time_util import set_sleep_percentage
 from .util import get_active_users
+from .util import formatNumber
 from .unfollow_util import get_given_user_followers
 from .unfollow_util import get_given_user_following
 from .unfollow_util import unfollow
@@ -36,7 +41,8 @@ from .unfollow_util import follow_given_user
 from .unfollow_util import load_follow_restriction
 from .unfollow_util import dump_follow_restriction
 from .unfollow_util import set_automated_followed_pool
-import random
+from .unfollow_util import get_all_users_following
+
 
 
 class InstaPy:
@@ -1418,3 +1424,164 @@ class InstaPy:
 
         with open('./logs/followed.txt', 'w') as followFile:
             followFile.write(str(self.followed))
+
+
+    def prune(self, upper_bound=float('inf'), lower_bound=800): 
+        """ Unfollow the users the logged in account is following if they are not within the bounds provided
+        """
+        list_of_users_2 = get_all_users_following(self.browser, self.username) 
+        print('Inspecting {} users'.format(len(list_of_users_2)))
+        random.shuffle(list_of_users_2)
+        pdb.set_trace()
+
+        for user in list_of_users_2: 
+            # if the users followers are not in the bounds provided unfollow them 
+            if not self.num_followers_in_bounds(user, upper_bound, lower_bound):
+                # print user + " out of bounds."
+                self.browser.get('https://www.instagram.com/' + user)                
+                time.sleep(2)
+                follow_button = self.browser.find_element_by_xpath("//*[contains(text(), 'Follow')]")
+                if follow_button.text == 'Following':
+                    # pdb.set_trace()
+                    # follow_button.click()
+                    print('{}'.format(user.encode('utf-8')))
+                    time.sleep(randint(3,10))
+            # else: 
+                # print('{} in bounds.'.format(user.encode('utf-8')))
+
+            time.sleep(randint(3,20))
+
+
+    def num_followers_in_bounds(self, user_name, upper_bound, lower_bound): 
+        self.browser.get('https://www.instagram.com/' + user_name)
+
+        try:
+            allfollowing = formatNumber(self.browser.find_element_by_xpath("//li[2]/a/span").text)
+            # print('inspecting: {} with {}'.format(user_name.encode('utf-8'), allfollowing))
+        except NoSuchElementException:
+            print ('Can\'t interact with private account')
+            
+        return (allfollowing >= lower_bound) and (allfollowing <= upper_bound)
+
+
+    def notifications_timer(self): 
+        engaged_already = {}
+        notification_tracking = {}
+        while True: 
+            engaged_already, notification_tracking = self.notifications(engaged_already, notification_tracking)
+
+            sleep_time_min = 30 
+            print('sleeping for {}'.format(sleep_time_min))
+            time.sleep(60 * sleep_time_min) 
+
+
+    def notifications(self, engaged_already, notification_tracking):
+        self.browser.get('https://www.instagram.com/' + self.username)
+
+        # Get the number of people the user is following. 
+        try:
+            button = self.browser.find_element_by_xpath("//nav/div[2]/div/div/div[3]/div/div[2]")
+        except NoSuchElementException:
+            raise RuntimeWarning('There are 0 people being followed')
+        # open the notifications dialog 
+        button.click()     
+        # get the latest notifications 
+        all_notifications = self.browser.find_element_by_xpath("//nav/div[2]/div/div/div[3]/div/div[2]/div/div/div[4]/ul").text
+        all_notifications = all_notifications.split('\n')
+
+        pdb.set_trace()
+        notification_tracking = self.parse_notifications(all_notifications)
+        pdb.set_trace()
+        engaged_already = self.act_on_notifications(engaged_already, notification_tracking)
+
+        return engaged_already, notification_tracking
+
+
+    def should_engage(self, user, engaged_already, notification_tracking):
+        pdb.set_trace()
+        if user in notification_tracking.keys():
+            users_notifications = notification_tracking[user]
+        else:
+            return False
+        
+        if user in engaged_already.keys(): 
+            users_engagment = engaged_already[user]
+        else: 
+            return True
+
+        # Sort notifications in place based on time 
+        user_notifications.sort(key=lambda tup: tup[1])
+        users_engagment.sort(key=lambda tup: tup[1])
+        result = user_notifications[-1][-1] < users_engagment[-1][-1]
+        return result
+
+
+    def add_engagment(self, user, engaged_already, engagment):
+        pdb.set_trace()
+        if user in engaged_already.keys():
+            engaged_already[user].append(engagment)
+        else:
+            engaged_already[user] = [engagment]
+
+        return engaged_already
+
+
+    def act_on_notifications(self, engaged_already, notification_tracking):
+        pdb.set_trace()
+        # engaged_already: a dictionary 
+        # notification_tracking: a dictionary
+        users = notification_tracking.keys()
+        for user in users:
+            if self.should_engage(user, engaged_already, notification_tracking):
+                links = get_links_for_username(self.browser, user, 1, True)
+                if links: # if the user is private this will be false 
+                    for link in links: 
+                        # self.browser.get(link)
+                        # liked = like_image(self.browser)
+                engagment = ('liked', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                engaged_already = self.add_engagment(user, engaged_already, engagment)
+        return engaged_already
+
+
+    def parse_notifications(self, notifications):
+        interactions = {}
+
+        # Get the name and the time of the interaction 
+        likers_names = [x.split(' ')[0] for x in notifications if 'liked' in x]
+        likers_times  = [x.split(' ')[-1] for x in notifications if 'liked' in x]
+        
+        for i in range(len(likers_names)):
+            liker_name = likers_names[i]
+            liker_time = likers_times[i]
+            if liker_time[-1]== 'h':
+                hours = int(liker_time[-2].encode('utf-8')) # not sure if I need this encode 
+                time = (datetime.now() - timedelta(hours = hours)).strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                if is_number(liker_time[-3]):
+                    minutes = liker_time[-3:-1].encode('utf-8')
+                else:
+                    minutes = liker_time[-2].encode('utf-8')
+                minutes = int(minutes)
+                time = (datetime.now() - timedelta(minutes = minutes)).strftime('%Y-%m-%d %H:%M:%S')
+
+            # Add entry to the interaction dict
+            if liker_name in interactions.keys():
+                interactions[liker_name].append(("like", time))
+            else: 
+                interactions[liker_name] = [("like", time)]
+
+        return interactions
+
+
+
+
+
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        pass
+    return False 
+
+
