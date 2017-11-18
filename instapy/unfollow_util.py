@@ -8,6 +8,7 @@ from .util import formatNumber
 from .print_log_writer import log_followed_pool
 from selenium.common.exceptions import NoSuchElementException
 import random
+import pdb 
 
 
 def set_automated_followed_pool(username):
@@ -433,6 +434,40 @@ def get_given_user_followers(browser,
 
     return person_list
 
+def get_all_users_following(browser, user_name):
+    browser.get('https://www.instagram.com/' + user_name)
+
+    # Get the number of people the user is following. 
+    try:        
+        allfollowing = formatNumber(
+            browser.find_element_by_xpath("//li[3]/a/span").text)
+    except NoSuchElementException:
+        raise RuntimeWarning('There are 0 people being followed')
+
+    # Get the link to reveal all the followed users 
+    try:
+        following_link = browser.find_elements_by_xpath(
+            '//a[@href="/' + user_name + '/following/"]')
+        following_link[0].send_keys("\n")
+    except BaseException as e:
+        print("following_link error \n", str(e))
+
+    sleep(2)
+
+    # Open the dialog box and scroll down to the bottom 
+    dialog = browser.find_element_by_xpath("//div[text()='Following']/following-sibling::div")
+    scroll_bottom(browser, dialog, allfollowing)
+    follow_buttons = dialog.find_elements_by_xpath("//div/div/span/button[text()='Following']")
+    person_list = []
+    for person in follow_buttons:
+        if person and hasattr(person, 'text') and person.text:
+            # Extracta the name of the account followed. 
+            person_list.append(person.find_element_by_xpath("../../../*").find_elements_by_tag_name("a")[1].text)
+    return person_list
+
+
+
+
 
 def get_given_user_following(browser,
                              user_name,
@@ -447,6 +482,7 @@ def get_given_user_following(browser,
     #  check how many poeple are following this user.
     #  throw RuntimeWarning if we are 0 people following this user
     try:
+        # the number of people being followed 
         allfollowing = formatNumber(
             browser.find_element_by_xpath("//li[3]/a/span").text)
     except NoSuchElementException:
@@ -465,13 +501,13 @@ def get_given_user_following(browser,
     dialog = browser.find_element_by_xpath(
         "//div[text()='Following']/following-sibling::div")
 
-    # scroll down the page
+    # scroll down the list of following 
     scroll_bottom(browser, dialog, allfollowing)
 
     # get follow buttons. This approch will find the follow buttons and
     # ignore the Unfollow/Requested buttons.
     follow_buttons = dialog.find_elements_by_xpath(
-        "//div/div/span/button[text()='Follow']")
+        "//div/div/span/button[text()='Following']")
     person_list = []
 
     if amount >= len(follow_buttons):
@@ -489,8 +525,8 @@ def get_given_user_following(browser,
     for person in finalBtnPerson:
 
         if person and hasattr(person, 'text') and person.text:
-            person_list.append(person.find_element_by_xpath(
-                "../../../*").find_elements_by_tag_name("a")[1].text)
+            # Extracta the name of the account followed. 
+            person_list.append(person.find_element_by_xpath("../../../*").find_elements_by_tag_name("a")[1].text)
 
     return person_list
 
