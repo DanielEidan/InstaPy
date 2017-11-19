@@ -1432,7 +1432,7 @@ class InstaPy:
         list_of_users_2 = get_all_users_following(self.browser, self.username) 
         print('Inspecting {} users'.format(len(list_of_users_2)))
         random.shuffle(list_of_users_2)
-        pdb.set_trace()
+        # pdb.set_trace()
 
         for user in list_of_users_2: 
             # if the users followers are not in the bounds provided unfollow them 
@@ -1489,17 +1489,20 @@ class InstaPy:
         all_notifications = self.browser.find_element_by_xpath("//nav/div[2]/div/div/div[3]/div/div[2]/div/div/div[4]/ul").text
         all_notifications = all_notifications.split('\n')
 
-        pdb.set_trace()
+        # pdb.set_trace()
         notification_tracking = self.parse_notifications(all_notifications)
-        pdb.set_trace()
+        # pdb.set_trace()
         engaged_already = self.act_on_notifications(engaged_already, notification_tracking)
 
         return engaged_already, notification_tracking
 
 
     def should_engage(self, user, engaged_already, notification_tracking):
-        pdb.set_trace()
-        if user in notification_tracking.keys():
+        ''' Return True/False based on the rules of engagment if action should be taken.
+            Rule: if the user has engaged with the account since the account owners last engagment, return True.
+        '''
+        # pdb.set_trace()
+        if user in notification_tracking.keys(): 
             users_notifications = notification_tracking[user]
         else:
             return False
@@ -1512,12 +1515,14 @@ class InstaPy:
         # Sort notifications in place based on time 
         user_notifications.sort(key=lambda tup: tup[1])
         users_engagment.sort(key=lambda tup: tup[1])
+
+        # Rule check 
         result = user_notifications[-1][-1] < users_engagment[-1][-1]
         return result
 
 
     def add_engagment(self, user, engaged_already, engagment):
-        pdb.set_trace()
+        # pdb.set_trace()
         if user in engaged_already.keys():
             engaged_already[user].append(engagment)
         else:
@@ -1527,19 +1532,23 @@ class InstaPy:
 
 
     def act_on_notifications(self, engaged_already, notification_tracking):
-        pdb.set_trace()
+        # pdb.set_trace()
         # engaged_already: a dictionary 
         # notification_tracking: a dictionary
         users = notification_tracking.keys()
         for user in users:
             if self.should_engage(user, engaged_already, notification_tracking):
+                print("engaging with: {}".format(user))
                 links = get_links_for_username(self.browser, user, 1, True)
                 if links: # if the user is private this will be false 
-                    for link in links: 
-                        # self.browser.get(link)
-                        # liked = like_image(self.browser)
+                    for link in links:
+                        print("liking these links: {}".format(link))
+                        self.browser.get(link)
+                        liked = like_image(self.browser)                                                
                 engagment = ('liked', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
                 engaged_already = self.add_engagment(user, engaged_already, engagment)
+            else: 
+                print("Not engaging with: {}".format(user))
         return engaged_already
 
 
