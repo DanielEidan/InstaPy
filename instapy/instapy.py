@@ -4,6 +4,7 @@ from os import environ
 import random
 import pdb
 import time
+import json
 from datetime import datetime, timedelta
 
 from random import randint
@@ -1471,7 +1472,7 @@ class InstaPy:
         try: 
             engaged_already = json.load(open('engaged_already.txt'))
             notification_tracking = json.load(open('notification_tracking.txt'))            
-            print("Tracking files .oaded")
+            print("Tracking files Loaded")
         except(ValueError, IOError) as e:
             print("Exception on load: {}".format(e))
             print("tracking files initiated")
@@ -1555,17 +1556,21 @@ class InstaPy:
         users = notification_tracking.keys()
         for user in users:
             if self.should_engage(user, engaged_already, notification_tracking):
-                print("engaging with: {}".format(user))
+                print("Engaging with: {}".format(user))
                 links = get_links_for_username(self.browser, user, 1, True)
                 if links: # if the user is private this will be false 
                     for link in links:
-                        print("liking these links: {}".format(link))
+                        print("liking: {}".format(link))
                         self.browser.get(link)
                         liked = like_image(self.browser)                                                
-                engagment = ('liked', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-                engaged_already = self.add_engagment(user, engaged_already, engagment)
-            else: 
-                print("Not engaging with: {}".format(user))
+                        engagment = ('liked', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                        engaged_already = self.add_engagment(user, engaged_already, engagment)
+                else: 
+                    engagment = ('User is private', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+                    engaged_already = self.add_engagment(user, engaged_already, engagment)
+                    print("Not engaging with: {} because they are private".format(user))
+            else:
+                print("Not engaging with: {} because they should not be engaged".format(user))
         return engaged_already
 
 
