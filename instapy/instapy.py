@@ -1467,10 +1467,27 @@ class InstaPy:
     def notifications_timer(self): 
         engaged_already = {}
         notification_tracking = {}
+
+        try: 
+            engaged_already = json.load(open('engaged_already.txt'))
+            notification_tracking = json.load(open('notification_tracking.txt'))            
+            print("Tracking files .oaded")
+        except(ValueError, IOError) as e:
+            print("Exception on load: {}".format(e))
+            print("tracking files initiated")
+            engaged_already = {}
+            notification_tracking = {}
+
         while True: 
             engaged_already, notification_tracking = self.notifications(engaged_already, notification_tracking)
 
-            sleep_time_min = 30 
+            try: 
+                json.dump(engaged_already,open('engaged_already.txt', 'w'))
+                json.dump(notification_tracking,open('notification_tracking.txt', 'w'))
+            except(Exception) as e:
+                print("Exception: {}".format(e)) 
+
+            sleep_time_min = randint(25,35)
             print('sleeping for {}'.format(sleep_time_min))
             time.sleep(60 * sleep_time_min) 
 
