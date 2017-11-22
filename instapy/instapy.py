@@ -1508,7 +1508,7 @@ class InstaPy:
         all_notifications = all_notifications.split('\n')
 
         # pdb.set_trace()
-        notification_tracking = self.parse_notifications(all_notifications)
+        notification_tracking = self.parse_notifications(all_notifications, notification_tracking)
         # pdb.set_trace()
         engaged_already = self.act_on_notifications(engaged_already, notification_tracking)
 
@@ -1531,11 +1531,11 @@ class InstaPy:
             return True
 
         # Sort notifications in place based on time 
-        user_notifications.sort(key=lambda tup: tup[1])
+        users_notifications.sort(key=lambda tup: tup[1])
         users_engagment.sort(key=lambda tup: tup[1])
 
         # Rule check 
-        result = user_notifications[-1][-1] < users_engagment[-1][-1]
+        result = users_notifications[-1][-1] < users_engagment[-1][-1]
         return result
 
 
@@ -1574,8 +1574,8 @@ class InstaPy:
         return engaged_already
 
 
-    def parse_notifications(self, notifications):
-        interactions = {}
+    def parse_notifications(self, notifications, notification_tracking):
+        # interactions = {}
 
         # Get the name and the time of the interaction 
         likers_names = [x.split(' ')[0] for x in notifications if 'liked' in x]
@@ -1596,12 +1596,12 @@ class InstaPy:
                 time = (datetime.now() - timedelta(minutes = minutes)).strftime('%Y-%m-%d %H:%M:%S')
 
             # Add entry to the interaction dict
-            if liker_name in interactions.keys():
-                interactions[liker_name].append(("like", time))
+            if liker_name in notification_tracking.keys():
+                notification_tracking[liker_name].append(("like", time))
             else: 
-                interactions[liker_name] = [("like", time)]
+                notification_tracking[liker_name] = [("like", time)]
 
-        return interactions
+        return notification_tracking
 
 
 
